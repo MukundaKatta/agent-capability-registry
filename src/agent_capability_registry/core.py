@@ -132,9 +132,7 @@ class CapabilityRegistry:
                 f"Capability name must not contain spaces: {name!r}"
             )
         if name in self._caps:
-            raise CapabilityRegistryError(
-                f"Capability already registered: {name!r}"
-            )
+            raise CapabilityRegistryError(f"Capability already registered: {name!r}")
         cap = Capability(
             name=name,
             description=description,
@@ -319,8 +317,7 @@ class CapabilityRegistry:
 
     def __repr__(self) -> str:
         return (
-            f"CapabilityRegistry(count={self.count()}, "
-            f"enabled={self.enabled_count()})"
+            f"CapabilityRegistry(count={self.count()}, enabled={self.enabled_count()})"
         )
 
     # ------------------------------------------------------------------

@@ -127,6 +127,13 @@ def test_registry_register_disabled():
     assert cap.enabled is False
 
 
+def test_registry_register_with_metadata():
+    reg = CapabilityRegistry()
+    cap = reg.register("search", metadata={"priority": 1})
+    assert cap.metadata == {"priority": 1}
+    assert reg.get("search").metadata == {"priority": 1}
+
+
 def test_registry_register_duplicate_raises():
     reg = CapabilityRegistry()
     reg.register("search")
