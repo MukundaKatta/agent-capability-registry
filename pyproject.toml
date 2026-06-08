@@ -4,15 +4,29 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-capability-registry"
-version = "0.1.0"
+version = "0.2.0"
 description = "Registry of named agent capabilities with enable/disable, tags, and prerequisite checking"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = []
+keywords = ["agent", "capability", "registry", "tags", "prerequisites"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/MukundaKatta/agent-capability-registry"
+Repository = "https://github.com/MukundaKatta/agent-capability-registry"
+Issues = "https://github.com/MukundaKatta/agent-capability-registry/issues"
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "ruff>=0.4"]
+dev = ["ruff>=0.4"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_capability_registry"]
