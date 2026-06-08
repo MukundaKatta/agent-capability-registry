@@ -1,12 +1,19 @@
 # agent-capability-registry
 
-Registry of named agent capabilities with enable/disable, tag filtering, and prerequisite checking. Zero dependencies.
+Registry of named agent capabilities with enable/disable, tag filtering, prerequisite checking, and JSON-friendly serialization. Pure standard library — **zero runtime dependencies**, fully type-hinted (ships a PEP 561 `py.typed` marker).
+
+When you build an LLM agent you usually have a set of named tools/skills
+("web_search", "file_write", "code_execute", ...) that can be turned on or off,
+grouped by tags, and may depend on one another. This package gives you a small,
+dependency-free object to keep track of them.
 
 ## Install
 
 ```bash
 pip install agent-capability-registry
 ```
+
+Requires Python 3.9 or newer.
 
 ## Usage
 
@@ -93,6 +100,40 @@ ok = registry.prerequisites_satisfied("code_execute")
 # True if all prerequisites are registered and enabled
 ```
 
+### Pythonic access
+
+```python
+"web_search" in registry           # bool — same as registry.contains(...)
+len(registry)                      # number registered — same as registry.count()
+for cap in registry:               # iterate Capability objects, sorted by name
+    print(cap.name, cap.enabled)
+```
+
+### Serialization
+
+The registry round-trips cleanly through plain JSON-serializable structures,
+which makes it easy to persist a set of capabilities to disk or send them over
+the wire.
+
+```python
+import json
+
+# Capability <-> dict
+data = cap.to_dict()
+cap = Capability.from_dict(data)        # inverse of to_dict()
+
+# Registry <-> list of dicts
+blob = registry.to_list()               # list[dict], sorted by name
+json.dump(blob, open("caps.json", "w"))
+
+# Rebuild from saved data
+restored = CapabilityRegistry.from_list(json.load(open("caps.json")))
+
+# Merge saved data into an existing registry
+registry.load(blob)                     # raises on duplicate names
+registry.load(blob, replace=True)       # overwrite existing names instead
+```
+
 ### Mutation
 
 ```python
@@ -111,6 +152,22 @@ registry.clear()          # remove everything
 | `requires` | Names of prerequisite capabilities |
 | `metadata` | Arbitrary key/value store |
 
+## Development
+
+The test suite uses only the Python standard library (`unittest`), so no
+third-party packages are required to run it:
+
+```bash
+python -m unittest discover -s tests
+```
+
+Optional linting (install with `pip install -e ".[dev]"`):
+
+```bash
+ruff check src tests
+```
+
 ## License
 
 MIT
+

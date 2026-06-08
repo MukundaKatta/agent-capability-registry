@@ -27,6 +27,7 @@ Example::
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -73,6 +74,38 @@ class Capability:
             "requires": list(self.requires),
             "metadata": dict(self.metadata),
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Capability:
+        """Build a :class:`Capability` from a mapping produced by
+        :meth:`to_dict`.
+
+        Only ``name`` is required; every other field falls back to its
+        default. This is the inverse of :meth:`to_dict` and round-trips
+        cleanly::
+
+            cap == Capability.from_dict(cap.to_dict())
+
+        Args:
+            data: Mapping with a ``name`` key and any subset of the other
+                capability fields.
+
+        Returns:
+            A new :class:`Capability`.
+
+        Raises:
+            CapabilityRegistryError: If ``data`` has no ``name`` key.
+        """
+        if "name" not in data:
+            raise CapabilityRegistryError("Capability data must include a 'name'")
+        return cls(
+            name=data["name"],
+            description=data.get("description", ""),
+            tags=list(data.get("tags") or []),
+            enabled=bool(data.get("enabled", True)),
+            requires=list(data.get("requires") or []),
+            metadata=dict(data.get("metadata") or {}),
+        )
 
     def __repr__(self) -> str:
         status = "enabled" if self.enabled else "disabled"
@@ -309,11 +342,84 @@ class CapabilityRegistry:
         self._caps.clear()
 
     # ------------------------------------------------------------------
+    # Serialisation
+    # ------------------------------------------------------------------
+
+    def to_list(self) -> list[dict[str, Any]]:
+        """Serialise every capability to a list of plain dicts.
+
+        The result is JSON-serialisable and ordered by capability name, so
+        repeated calls (and round-trips through :meth:`load`) are stable::
+
+            data = registry.to_list()
+            CapabilityRegistry.from_list(data)  # rebuilds the registry
+
+        Returns:
+            A list of dicts, one per capability, sorted by name.
+        """
+        return [cap.to_dict() for cap in self.all()]
+
+    def load(self, data: list[dict[str, Any]], *, replace: bool = False) -> None:
+        """Load capabilities from a list of dicts (the inverse of
+        :meth:`to_list`).
+
+        Args:
+            data:    Iterable of mappings as produced by
+                :meth:`Capability.to_dict`.
+            replace: If ``True``, any existing capability with the same name
+                is overwritten. If ``False`` (the default), a duplicate name
+                raises, leaving previously loaded entries in place.
+
+        Raises:
+            CapabilityRegistryError: If an entry lacks a ``name``, has a name
+                containing spaces, or (when ``replace`` is ``False``)
+                duplicates an existing name.
+        """
+        for entry in data:
+            cap = Capability.from_dict(entry)
+            if replace:
+                self._caps.pop(cap.name, None)
+            register = self.register_or_replace if replace else self.register
+            register(
+                cap.name,
+                cap.description,
+                tags=cap.tags,
+                enabled=cap.enabled,
+                requires=cap.requires,
+                metadata=cap.metadata,
+            )
+
+    @classmethod
+    def from_list(cls, data: list[dict[str, Any]]) -> CapabilityRegistry:
+        """Build a fresh registry from a list of capability dicts.
+
+        Convenience constructor equivalent to creating an empty registry and
+        calling :meth:`load`.
+
+        Args:
+            data: Iterable of mappings as produced by :meth:`to_list`.
+
+        Returns:
+            A new :class:`CapabilityRegistry`.
+        """
+        registry = cls()
+        registry.load(data)
+        return registry
+
+    # ------------------------------------------------------------------
     # Dunder
     # ------------------------------------------------------------------
 
     def __len__(self) -> int:
         return len(self._caps)
+
+    def __contains__(self, name: object) -> bool:
+        """``name in registry`` — equivalent to :meth:`contains`."""
+        return name in self._caps
+
+    def __iter__(self) -> Iterator[Capability]:
+        """Iterate over capabilities in name order."""
+        return iter(self.all())
 
     def __repr__(self) -> str:
         return (
